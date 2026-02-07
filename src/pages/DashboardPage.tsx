@@ -1,3 +1,4 @@
+import React, { useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
@@ -10,14 +11,85 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
-function Loader() {
+function Skeleton({ className }: { className?: string }) {
+  return <div className={cn("animate-pulse bg-slate-200 rounded-2xl", className)} />;
+}
+
+function DashboardSkeleton() {
   return (
-    <div className="flex flex-col items-center justify-center py-12 space-y-4">
-      <div className="w-10 h-10 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
-      <p className="text-gray-400 animate-pulse">جاري تحميل بيانات لوحة التحكم...</p>
+    <div className="space-y-10">
+      {/* Stats Skeleton */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/40 space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="space-y-2">
+                <Skeleton className="h-3 w-16" />
+                <Skeleton className="h-10 w-24" />
+              </div>
+              <Skeleton className="w-14 h-14 rounded-3xl" />
+            </div>
+            <Skeleton className="h-1.5 w-full rounded-full" />
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[1, 2].map((i) => (
+          <div key={i} className="bg-white rounded-3xl border border-slate-100 p-8 shadow-xl shadow-slate-200/40 space-y-6">
+            <div className="flex justify-between items-center">
+              <Skeleton className="h-6 w-32" />
+              <Skeleton className="h-4 w-16" />
+            </div>
+            <div className="space-y-4">
+              {[1, 2, 3, 4].map((j) => (
+                <div key={j} className="flex items-center justify-between p-4 bg-slate-50 rounded-[1.5rem]">
+                  <div className="flex items-center gap-4">
+                    <Skeleton className="w-12 h-12 rounded-2xl" />
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-20" />
+                    </div>
+                  </div>
+                  <Skeleton className="h-6 w-12" />
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
+
+const StatCard = React.memo(({ label, value, icon: Icon, color, sub, gradient }: { label: string; value: string | number; icon: any; color: string; sub?: string; gradient: string }) => {
+  return (
+    <div className="relative group overflow-hidden bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
+      <div className={cn("absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 blur-3xl opacity-20 transition-opacity group-hover:opacity-40", gradient)} />
+      
+      <div className="relative flex items-center justify-between">
+        <div className="space-y-2">
+          <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{label}</p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-4xl font-black text-slate-900 tracking-tighter">{value}</p>
+            {sub && <span className="text-[10px] font-black text-slate-400 uppercase">/ {sub}</span>}
+          </div>
+        </div>
+        <div className={cn("w-14 h-14 rounded-3xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-500", color)}>
+          <Icon className="w-7 h-7 text-white" />
+        </div>
+      </div>
+      
+      <div className="mt-6 flex items-center gap-2">
+         <div className="h-1 flex-1 bg-slate-50 rounded-full overflow-hidden">
+            <div className={cn("h-full w-2/3 rounded-full opacity-30", gradient)} />
+         </div>
+      </div>
+    </div>
+  );
+});
+
+StatCard.displayName = 'StatCard';
 
 function AnnouncementsPreview() {
   const { currentUser } = useAuth();
@@ -27,7 +99,9 @@ function AnnouncementsPreview() {
     enabled: !!currentUser,
   });
 
-  if (isLoading || announcements.length === 0) return null;
+  const announcementList = useMemo(() => announcements, [announcements]);
+
+  if (isLoading || announcementList.length === 0) return null;
 
   return (
     <div className="mb-10 space-y-6">
@@ -43,7 +117,7 @@ function AnnouncementsPreview() {
         </Link>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {announcements.map((ann: Announcement) => (
+        {announcementList.map((ann: Announcement) => (
           <div key={ann.id} className="relative group bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-indigo-600/10 hover:border-indigo-100 transition-all duration-500 overflow-hidden animate-in fade-in slide-in-from-bottom-4">
             <div className="absolute top-0 right-0 w-24 h-24 bg-orange-50 rounded-full -mr-12 -mt-12 blur-2xl group-hover:bg-indigo-50 transition-colors" />
             <div className="relative flex gap-4">
@@ -72,33 +146,6 @@ function AnnouncementsPreview() {
   );
 }
 
-function StatCard({ label, value, icon: Icon, color, sub, gradient }: { label: string; value: string | number; icon: any; color: string; sub?: string; gradient: string }) {
-  return (
-    <div className="relative group overflow-hidden bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-xl shadow-slate-200/50 hover:shadow-2xl hover:-translate-y-1 transition-all duration-500">
-      <div className={cn("absolute top-0 right-0 w-32 h-32 rounded-full -mr-16 -mt-16 blur-3xl opacity-20 transition-opacity group-hover:opacity-40", gradient)} />
-      
-      <div className="relative flex items-center justify-between">
-        <div className="space-y-2">
-          <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">{label}</p>
-          <div className="flex items-baseline gap-2">
-            <p className="text-4xl font-black text-slate-900 tracking-tighter">{value}</p>
-            {sub && <span className="text-[10px] font-black text-slate-400 uppercase">/ {sub}</span>}
-          </div>
-        </div>
-        <div className={cn("w-14 h-14 rounded-3xl flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-500", color)}>
-          <Icon className="w-7 h-7 text-white" />
-        </div>
-      </div>
-      
-      <div className="mt-6 flex items-center gap-2">
-         <div className="h-1 flex-1 bg-slate-50 rounded-full overflow-hidden">
-            <div className={cn("h-full w-2/3 rounded-full opacity-30", gradient)} />
-         </div>
-      </div>
-    </div>
-  );
-}
-
 function DeanDashboard() {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['dean-stats'],
@@ -117,7 +164,7 @@ function DeanDashboard() {
 
   const loading = statsLoading || deptsLoading || actLoading;
 
-  if (loading) return <Loader />;
+  if (loading) return <DashboardSkeleton />;
   if (!stats) return <div className="text-center py-10 text-gray-400">فشل في تحميل لوحة التحكم.</div>;
 
   return (
@@ -315,7 +362,7 @@ function HodDashboard() {
 
   const loading = statsLoading || coursesLoading;
 
-  if (loading) return <Loader />;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-10">
@@ -384,7 +431,7 @@ function TeacherDashboard() {
   // Map JS getDay() (0-6) to your day_of_week if necessary, but assuming 0-4 for Sun-Thu
   const todayLectures = myLectures.filter((l: any) => l.day_of_week === today);
 
-  if (loading) return <Loader />;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-10">
@@ -476,7 +523,7 @@ function StudentDashboard() {
   const today = new Date().getDay();
   const todayLectures = myLectures.filter((l: any) => l.day_of_week === today);
 
-  if (loading) return <Loader />;
+  if (loading) return <DashboardSkeleton />;
 
   return (
     <div className="space-y-10">

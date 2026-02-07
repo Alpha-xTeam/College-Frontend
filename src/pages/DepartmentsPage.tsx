@@ -6,6 +6,7 @@ import type { Department, User, Course, Lecture } from '@/types';
 import { Building2, Users, BookOpen, Calendar, GraduationCap, Loader2, Plus, X, UserMinus, Search, Settings, Trash2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Skeleton } from '@/components/Skeleton';
 
 export function DepartmentsPage() {
   const { currentUser } = useAuth();
@@ -121,8 +122,27 @@ export function DepartmentsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      <div className="space-y-6 text-right" dir="rtl">
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-32" />
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm h-64">
+              <Skeleton className="h-1/3 w-full rounded-none" />
+              <div className="p-5 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <Skeleton className="h-16" />
+                  <Skeleton className="h-16" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

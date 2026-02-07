@@ -9,6 +9,7 @@ import { cn } from '@/utils/cn';
 import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Skeleton } from '@/components/Skeleton';
 
 const DAYS: DayName[] = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const DAYS_AR: Record<string, string> = {
@@ -301,8 +302,35 @@ export function SchedulePage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="space-y-6 text-right" dir="rtl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <div className="flex items-center gap-3 flex-wrap">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-11 w-40" />
+          </div>
+        </div>
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm h-[600px] flex flex-col">
+          <div className="h-12 bg-gray-50 border-b border-gray-200 flex">
+            <div className="w-28 border-l border-gray-200" />
+            <div className="flex-1" />
+          </div>
+          {[1, 2, 3, 4, 5, 6].map(i => (
+            <div key={i} className="flex-1 flex border-b border-gray-100 last:border-b-0">
+              <div className="w-28 border-l border-gray-200 bg-gray-50/30 flex items-center justify-center">
+                <Skeleton className="h-4 w-12" />
+              </div>
+              <div className="flex-1 relative p-4">
+                <Skeleton className="h-full w-3/4 absolute right-10" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

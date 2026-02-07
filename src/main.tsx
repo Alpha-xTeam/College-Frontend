@@ -8,8 +8,10 @@ const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false, // Prevents refetching when switching tabs
-      staleTime: 1000 * 60 * 5, // Data is fresh for 5 minutes
+      staleTime: 1000 * 60 * 10, // Data is fresh for 10 minutes
+      gcTime: 1000 * 60 * 30, // Keep in cache for 30 minutes
       retry: 1,
+      refetchOnMount: false, // Don't refetch on mount if data is stale but we still have it
     },
   },
 });

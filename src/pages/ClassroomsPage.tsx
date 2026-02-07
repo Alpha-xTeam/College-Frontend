@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import api from '@/lib/api';
@@ -33,7 +33,7 @@ const materialColors = {
   assignment: 'bg-amber-100 text-amber-600',
 };
 
-function CommentSection({ postId, currentUser }: { postId: string; currentUser: User | null }) {
+const CommentSection = React.memo(({ postId, currentUser }: { postId: string; currentUser: User | null }) => {
   const queryClient = useQueryClient();
   const [newComment, setNewComment] = useState('');
 
@@ -50,9 +50,37 @@ function CommentSection({ postId, currentUser }: { postId: string; currentUser: 
         content
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['classrooms', 'posts', postId, 'comments'] });
+    onMutate: async (content) => {
+      const queryKey = ['classrooms', 'posts', postId, 'comments'];
+      await queryClient.cancelQueries({ queryKey });
+      const previousComments = queryClient.getQueryData<PostComment[]>(queryKey);
+
+      const optimisticComment = {
+        id: 'temp-' + Date.now(),
+        post_id: postId,
+        author_id: currentUser?.id,
+        content,
+        created_at: new Date().toISOString(),
+        profiles: {
+          full_name: currentUser?.full_name,
+          full_name_ar: currentUser?.full_name_ar
+        }
+      };
+
+      queryClient.setQueryData<PostComment[]>(queryKey, (old) => 
+        old ? [...old, optimisticComment as any] : [optimisticComment as any]
+      );
+
       setNewComment('');
+      return { previousComments };
+    },
+    onError: (_err, _content, context) => {
+      if (context?.previousComments) {
+        queryClient.setQueryData(['classrooms', 'posts', postId, 'comments'], context.previousComments);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['classrooms', 'posts', postId, 'comments'] });
     }
   });
 
@@ -60,7 +88,23 @@ function CommentSection({ postId, currentUser }: { postId: string; currentUser: 
     mutationFn: async (commentId: string) => {
       return await api.delete(`/classrooms/posts/comments/${commentId}`);
     },
-    onSuccess: () => {
+    onMutate: async (commentId) => {
+      const queryKey = ['classrooms', 'posts', postId, 'comments'];
+      await queryClient.cancelQueries({ queryKey });
+      const previousComments = queryClient.getQueryData<PostComment[]>(queryKey);
+
+      queryClient.setQueryData<PostComment[]>(queryKey, (old) => 
+        old ? old.filter(c => c.id !== commentId) : []
+      );
+
+      return { previousComments };
+    },
+    onError: (_err, _commentId, context) => {
+      if (context?.previousComments) {
+        queryClient.setQueryData(['classrooms', 'posts', postId, 'comments'], context.previousComments);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['classrooms', 'posts', postId, 'comments'] });
     }
   });
@@ -71,10 +115,73 @@ function CommentSection({ postId, currentUser }: { postId: string; currentUser: 
     addCommentMutation.mutate(newComment.trim());
   };
 
-  const handleDeleteComment = (commentId: string) => {
+  const handleDeleteComment = useCallback((commentId: string) => {
     if (!window.confirm('هل أنت متأكد من حذف هذا التعليق؟')) return;
     deleteCommentMutation.mutate(commentId);
-  };
+  }, [deleteCommentMutation]);
+
+  return (
+    <div className="mt-6 pt-6 border-t border-gray-100">
+      <div className="flex items-center gap-2 mb-4 text-sm font-bold text-gray-700">
+        <MessageSquare className="w-4 h-4 text-indigo-600" />
+        التعليقات ({comments.length})
+      </div>
+      
+      <div className="space-y-4 mb-4 max-h-[300px] overflow-y-auto custom-scrollbar">
+        {loading ? (
+          <div className="flex justify-center py-2">
+            <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
+          </div>
+        ) : comments.length === 0 ? (
+          <p className="text-xs text-gray-400 text-center italic py-2">لا توجد تعليقات بعد.</p>
+        ) : (
+          comments.map(comment => (
+            <div key={comment.id} className="flex gap-3 group">
+              <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[10px] font-bold shrink-0 text-indigo-600">
+                {comment.profiles?.full_name?.charAt(0)}
+              </div>
+              <div className="flex-1 bg-gray-50 rounded-2xl px-3 py-2">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-xs font-bold text-gray-900">{comment.profiles?.full_name_ar || comment.profiles?.full_name}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] text-gray-400">{new Date(comment.created_at).toLocaleDateString('ar-IQ')}</span>
+                    {(comment.author_id === currentUser?.id || currentUser?.role === 'hod' || currentUser?.role === 'dean' || currentUser?.role === 'owner') && (
+                      <button onClick={() => handleDeleteComment(comment.id)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+                <p className="text-sm text-gray-700">{comment.content}</p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <form onSubmit={handleSubmit} className="relative">
+        <input
+          type="text"
+          value={newComment}
+          onChange={e => setNewComment(e.target.value)}
+          placeholder="اكتب تعليقاً..."
+          className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm pl-10 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
+          dir="rtl"
+        />
+        <button 
+          type="submit"
+          disabled={!newComment.trim() || addCommentMutation.isPending}
+          className="absolute left-2 top-2 p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-30"
+          title="إرسال"
+        >
+          {addCommentMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+        </button>
+      </form>
+    </div>
+  );
+});
+
+CommentSection.displayName = 'CommentSection';
 
   return (
     <div className="mt-6 pt-6 border-t border-gray-100">
@@ -254,7 +361,23 @@ export function ClassroomsPage() {
     mutationFn: async (postId: string) => {
       return await api.delete(`/classrooms/${selectedClassroom?.id}/posts/${postId}`);
     },
-    onSuccess: () => {
+    onMutate: async (postId) => {
+      const queryKey = ['classrooms', selectedClassroom?.id, 'posts'];
+      await queryClient.cancelQueries({ queryKey });
+      const previousPosts = queryClient.getQueryData<ClassroomPost[]>(queryKey);
+
+      queryClient.setQueryData<ClassroomPost[]>(queryKey, (old) => 
+        old ? old.filter(post => post.id !== postId) : []
+      );
+
+      return { previousPosts };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousPosts) {
+        queryClient.setQueryData(['classrooms', selectedClassroom?.id, 'posts'], context.previousPosts);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['classrooms', selectedClassroom?.id, 'posts'] });
     }
   });
@@ -279,7 +402,39 @@ export function ClassroomsPage() {
         params: { option_index: optionIndex }
       });
     },
-    onSuccess: () => {
+    onMutate: async ({ postId, optionIndex }) => {
+      const queryKey = ['classrooms', selectedClassroom?.id, 'posts'];
+      await queryClient.cancelQueries({ queryKey });
+      const previousPosts = queryClient.getQueryData<ClassroomPost[]>(queryKey);
+
+      queryClient.setQueryData<ClassroomPost[]>(queryKey, (old) => {
+        if (!old) return [];
+        return old.map(post => {
+          if (post.id === postId) {
+            const poll_responses = post.poll_responses || [];
+            const userVoteIndex = poll_responses.findIndex(r => r.user_id === currentUser?.id);
+            
+            let newResponses;
+            if (userVoteIndex > -1) {
+              newResponses = [...poll_responses];
+              newResponses[userVoteIndex] = { ...newResponses[userVoteIndex], option_index: optionIndex };
+            } else {
+              newResponses = [...poll_responses, { user_id: currentUser?.id, option_index: optionIndex } as any];
+            }
+            return { ...post, poll_responses: newResponses };
+          }
+          return post;
+        });
+      });
+
+      return { previousPosts };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousPosts) {
+        queryClient.setQueryData(['classrooms', selectedClassroom?.id, 'posts'], context.previousPosts);
+      }
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['classrooms', selectedClassroom?.id, 'posts'] });
     }
   });
@@ -301,9 +456,41 @@ export function ClassroomsPage() {
     mutationFn: async ({ submissionId, grade, feedback }: { submissionId: string, grade: number, feedback: string }) => {
       return await api.post(`/classrooms/submissions/${submissionId}/grade`, { grade, feedback });
     },
+    onMutate: async ({ submissionId, grade }) => {
+      const queryKey = ['classrooms', selectedClassroom?.id, 'posts'];
+      await queryClient.cancelQueries({ queryKey });
+      const previousPosts = queryClient.getQueryData<ClassroomPost[]>(queryKey);
+
+      queryClient.setQueryData<ClassroomPost[]>(queryKey, (old) => {
+        if (!old) return [];
+        return old.map(post => {
+          if (post.submissions) {
+            const hasSubmission = post.submissions.some(s => s.id === submissionId);
+            if (hasSubmission) {
+              return {
+                ...post,
+                submissions: post.submissions.map(s => 
+                  s.id === submissionId ? { ...s, grade } : s
+                )
+              };
+            }
+          }
+          return post;
+        });
+      });
+
+      return { previousPosts };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['classrooms', selectedClassroom?.id, 'posts'] });
       alert('تم رصد الدرجة بنجاح.');
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previousPosts) {
+        queryClient.setQueryData(['classrooms', selectedClassroom?.id, 'posts'], context.previousPosts);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['classrooms', selectedClassroom?.id, 'posts'] });
     }
   });
 

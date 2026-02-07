@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { dashboardQueries } from '@/lib/queries';
 import {
   LayoutDashboard, Calendar, BookOpen, Users, ClipboardCheck,
   GraduationCap, ChevronLeft, ChevronRight, LogOut, Menu, X, 
@@ -34,11 +36,51 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { currentUser, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userDropdown, setUserDropdown] = useState(false);
 
   if (!currentUser) return null;
+
+  const prefetchData = (path: string) => {
+    try {
+      if (path === '/dashboard') {
+        if (currentUser.role === 'dean' || currentUser.role === 'owner') {
+          queryClient.prefetchQuery({ queryKey: ['dean-stats'], queryFn: dashboardQueries.getDeanStats });
+          queryClient.prefetchQuery({ queryKey: ['departments-full'], queryFn: dashboardQueries.getDepartmentsFull });
+          queryClient.prefetchQuery({ queryKey: ['recent-activities'], queryFn: dashboardQueries.getRecentActivities });
+        } else if (currentUser.role === 'hod' || currentUser.role === 'supervisor') {
+          queryClient.prefetchQuery({ queryKey: ['hod-stats', currentUser.department_id], queryFn: () => dashboardQueries.getHodStats(currentUser.department_id!) });
+        } else if (currentUser.role === 'teacher') {
+          queryClient.prefetchQuery({ queryKey: ['teacher-stats', currentUser.id], queryFn: () => dashboardQueries.getTeacherStats(currentUser.id!) });
+        } else if (currentUser.role === 'student') {
+          queryClient.prefetchQuery({ queryKey: ['student-stats', currentUser.id], queryFn: () => dashboardQueries.getStudentStats(currentUser.id!) });
+        }
+      } else if (path === '/announcements') {
+        queryClient.prefetchQuery({
+          queryKey: ['announcements', currentUser.department_id],
+          queryFn: () => dashboardQueries.getAnnouncements(currentUser.department_id || ''),
+        });
+      } else if (path === '/schedule') {
+        queryClient.prefetchQuery({ queryKey: ['all-lectures'], queryFn: dashboardQueries.getLectures });
+      } else if (path === '/rooms') {
+        queryClient.prefetchQuery({ queryKey: ['rooms'], queryFn: () => api.get('/rooms').then(res => res.data) });
+      } else if (path === '/departments') {
+        queryClient.prefetchQuery({ queryKey: ['departments-full'], queryFn: dashboardQueries.getDepartmentsFull });
+      } else if (path === '/classrooms') {
+        const queryKey = currentUser.role === 'teacher' ? ['teacher-classrooms', currentUser.id] : ['student-classrooms', currentUser.id];
+        queryClient.prefetchQuery({ 
+          queryKey, 
+          queryFn: () => currentUser.role === 'teacher' 
+            ? dashboardQueries.getTeacherClassrooms(currentUser.id!) 
+            : api.get(`/classrooms/student/${currentUser.id}`).then(res => res.data)
+        });
+      }
+    } catch (e) {
+      console.error('Prefetch error:', e);
+    }
+  };
 
   const filteredNav = navItems.filter(item => item.roles.includes(currentUser.role));
   const roleInfo = roleLabels[currentUser.role];
@@ -84,6 +126,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <button
                 key={item.path}
                 onClick={() => { navigate(item.path); setMobileOpen(false); }}
+                onMouseEnter={() => prefetchData(item.path)}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-sm font-bold transition-all duration-300 relative group",
                   isActive

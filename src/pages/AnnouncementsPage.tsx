@@ -6,6 +6,7 @@ import { dashboardQueries } from '@/lib/queries';
 import type { Announcement } from '@/types';
 import { Megaphone, Plus, Trash2, Bell, X, AlertTriangle, User, Calendar, CheckSquare } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import { Skeleton } from '@/components/Skeleton';
 
 export default function AnnouncementsPage() {
   const { currentUser } = useAuth();
@@ -26,25 +27,69 @@ export default function AnnouncementsPage() {
 
   const addMutation = useMutation({
     mutationFn: (newAnn: any) => api.post('/announcements/', newAnn),
+    onMutate: async (newAnn) => {
+      // إلغاء أي جلب بيانات قيد التنفيذ للإعلانات لمنع التداخل
+      await queryClient.cancelQueries({ queryKey: ['announcements', currentUser?.department_id] });
+
+      // التقاط الحالة الحالية قبل التعديل (لحالة الاسترجاع في حال الفشل)
+      const previousAnnouncements = queryClient.getQueryData(['announcements', currentUser?.department_id]);
+
+      // إضافة الإعلان الجديد "بشكل متفائل" مع بيانات مؤقتة
+      const optimisticAnn = {
+        id: 'temp-' + Date.now(),
+        ...newAnn,
+        publisher_name: currentUser?.full_name || 'أنت',
+        publisher_role: currentUser?.role || '',
+        created_at: new Date().toISOString(),
+        created_by: currentUser?.id
+      };
+
+      queryClient.setQueryData(['announcements', currentUser?.department_id], (old: Announcement[] | undefined) => 
+        old ? [optimisticAnn, ...old] : [optimisticAnn]
+      );
+
+      return { previousAnnouncements };
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
       setShowAddModal(false);
       setTitle('');
       setContent('');
       setIsGlobal(false);
     },
-    onError: (err: any) => {
+    onError: (err: any, _newAnn, context) => {
+      // في حال فشل الطلب، نسترجع الحالة السابقة
+      if (context?.previousAnnouncements) {
+        queryClient.setQueryData(['announcements', currentUser?.department_id], context.previousAnnouncements);
+      }
       setError(err.response?.data?.detail || 'فشل في نشر الإعلان');
+    },
+    onSettled: () => {
+      // دائماً نقوم بتحديث البيانات من السيرفر للتأكد من المزامنة
+      queryClient.invalidateQueries({ queryKey: ['announcements'] });
     }
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/announcements/${id}`),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['announcements'] });
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['announcements', currentUser?.department_id] });
+      const previousAnnouncements = queryClient.getQueryData(['announcements', currentUser?.department_id]);
+
+      // حذف الإعلان "بشكل متفائل" من الواجهة فوراً
+      queryClient.setQueryData(['announcements', currentUser?.department_id], (old: Announcement[] | undefined) => 
+        old ? old.filter(ann => ann.id !== id) : []
+      );
+
+      return { previousAnnouncements };
     },
-    onError: () => {
+    onError: (_err, _id, context) => {
+      if (context?.previousAnnouncements) {
+        queryClient.setQueryData(['announcements', currentUser?.department_id], context.previousAnnouncements);
+      }
       alert('فشل في حذف الإعلان');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['announcements', currentUser?.department_id] });
     }
   });
 
@@ -69,8 +114,34 @@ export default function AnnouncementsPage() {
 
   if (isLoading && announcements.length === 0) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+      <div className="space-y-6 max-w-5xl mx-auto text-right" dir="rtl">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <Skeleton className="h-11 w-44 rounded-xl" />
+        </div>
+        <div className="grid gap-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm h-48">
+              <div className="flex gap-5">
+                <Skeleton className="w-12 h-12 rounded-2xl shrink-0" />
+                <div className="flex-1 space-y-4">
+                  <Skeleton className="h-6 w-1/3" />
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                  </div>
+                  <div className="flex gap-4 pt-4">
+                    <Skeleton className="h-6 w-32" />
+                    <Skeleton className="h-6 w-32" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

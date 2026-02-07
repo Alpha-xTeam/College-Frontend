@@ -8,6 +8,7 @@ import type { UserRole } from '@/types';
 import * as XLSX from 'xlsx';
 import { toPng } from 'html-to-image';
 import { QRCodeSVG } from 'qrcode.react';
+import { Skeleton, TableSkeleton } from '@/components/Skeleton';
 
 const roleColors = {
   owner: 'bg-red-100 text-red-700',
@@ -185,7 +186,14 @@ export function UsersPage() {
           const dataUrl = await toPng(ref, { 
             quality: 1,
             pixelRatio: 2,
-            backgroundColor: '#ffffff'
+            backgroundColor: '#ffffff',
+            cacheBust: true,
+            filter: (node: any) => {
+              if (node.tagName === 'LINK' && node.rel === 'stylesheet' && !node.href.includes(window.location.origin)) {
+                return false; 
+              }
+              return true;
+            }
           });
           const link = document.createElement('a');
           link.download = `حساب-${student.full_name_ar}.png`;
@@ -252,8 +260,38 @@ export function UsersPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      <div className="space-y-6 text-right" dir="rtl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-44 rounded-xl" />
+            <Skeleton className="h-10 w-44 rounded-xl" />
+          </div>
+        </div>
+        
+        {/* Filters Skeleton */}
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Skeleton className="h-11 flex-1 rounded-xl" />
+          <Skeleton className="h-11 w-44 rounded-xl" />
+        </div>
+
+        {/* Role Summary Skeleton */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 flex flex-col items-center">
+              <Skeleton className="h-6 w-20 rounded-full mb-2" />
+              <Skeleton className="h-8 w-12" />
+            </div>
+          ))}
+        </div>
+
+        {/* Users Table Skeleton */}
+        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+          <TableSkeleton rows={10} cols={6} />
+        </div>
       </div>
     );
   }

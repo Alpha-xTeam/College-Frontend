@@ -17,6 +17,7 @@ import {
   FileText,
   Activity
 } from 'lucide-react';
+import { Skeleton } from '@/components/Skeleton';
 
 export function ReportsPage() {
   const [stats, setStats] = useState<any>(null);
@@ -48,8 +49,60 @@ export function ReportsPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      <div className="space-y-8 text-right font-sans" dir="rtl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-6 w-96" />
+          </div>
+          <Skeleton className="h-12 w-48 rounded-2xl" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map(idx => (
+            <div key={idx} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+              <div className="flex items-center gap-4">
+                <Skeleton className="p-4 w-15 h-15 rounded-2xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-8 w-16" />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm h-[500px]">
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
+                <Skeleton className="h-7 w-48" />
+                <Skeleton className="h-6 w-24 rounded-full" />
+              </div>
+              <div className="p-6 space-y-4">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="lg:col-span-1 space-y-6">
+            <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm h-[350px]">
+              <Skeleton className="h-6 w-40 mb-6" />
+              <div className="space-y-6">
+                {[1, 2, 3, 4, 5].map(i => (
+                  <div key={i} className="space-y-2">
+                    <div className="flex justify-between">
+                      <Skeleton className="h-3 w-24" />
+                      <Skeleton className="h-3 w-12" />
+                    </div>
+                    <Skeleton className="h-2 w-full rounded-full" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

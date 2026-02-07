@@ -10,6 +10,7 @@ import {
 import { cn } from '@/utils/cn';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { QRCodeSVG } from 'qrcode.react';
+import { Skeleton } from '@/components/Skeleton';
 
 export function AttendancePage() {
   const { currentUser } = useAuth();
@@ -129,9 +130,40 @@ function TeacherAttendance() {
         status: status
       });
     },
-    onSuccess: (_, variables) => {
+    onMutate: async ({ sessionId, studentId, status }) => {
+      const queryKey = ['attendance', 'logs', 'session', sessionId];
+      
+      // إلغاء أي إعادة جلب للبيانات حالياً لمنع تداخل الحالة المتفائلة
+      await queryClient.cancelQueries({ queryKey });
+
+      // التقاط الحالة الحالية قبل التعديل لغرض الاسترجاع عند الفشل
+      const previousLogs = queryClient.getQueryData<AttendanceLog[]>(queryKey);
+
+      // تحديث الواجهة بشكل متفائل وفوري
+      queryClient.setQueryData<AttendanceLog[]>(queryKey, (old) => {
+        if (!old) return [{ student_id: studentId, status, session_id: sessionId } as AttendanceLog];
+        
+        const existingLogIndex = old.findIndex(l => l.student_id === studentId);
+        if (existingLogIndex > -1) {
+          const newLogs = [...old];
+          newLogs[existingLogIndex] = { ...newLogs[existingLogIndex], status: status as any };
+          return newLogs;
+        }
+        return [...old, { student_id: studentId, status, session_id: sessionId } as AttendanceLog];
+      });
+
+      return { previousLogs };
+    },
+    onError: (_err, variables, context) => {
+      // في حال الفشل، نرجع السجل لحالته السابقة
+      if (context?.previousLogs) {
+        queryClient.setQueryData(['attendance', 'logs', 'session', variables.sessionId], context.previousLogs);
+      }
+    },
+    onSettled: (_, __, variables) => {
+      // المزامنة النهائية مع السيرفر وتحديث العدادات
       queryClient.invalidateQueries({ queryKey: ['attendance', 'logs', 'session', variables.sessionId] });
-      queryClient.invalidateQueries({ queryKey: ['attendance', 'sessions'] }); // Update counts
+      queryClient.invalidateQueries({ queryKey: ['attendance', 'sessions'] });
     }
   });
 
@@ -148,8 +180,27 @@ function TeacherAttendance() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      <div className="space-y-8 pb-10 text-right" dir="rtl">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="bg-white rounded-[2rem] border-2 border-gray-100 p-6 h-64">
+              <Skeleton className="h-12 w-12 rounded-2xl mb-4" />
+              <Skeleton className="h-6 w-3/4 mb-2" />
+              <Skeleton className="h-4 w-1/2 mb-4" />
+              <div className="mt-auto pt-4 flex justify-between items-center border-t border-gray-50">
+                <Skeleton className="h-10 w-32 rounded-2xl" />
+                <Skeleton className="h-8 w-12" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }
@@ -620,8 +671,28 @@ function StudentAttendance() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+      <div className="space-y-8 pb-10 text-right" dir="rtl">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-3">
+            <Skeleton className="h-10 w-64" />
+            <Skeleton className="h-4 w-80" />
+          </div>
+          <Skeleton className="h-12 w-48 rounded-2xl" />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <Skeleton className="h-40 rounded-[2rem]" />
+          <Skeleton className="h-40 rounded-[2rem]" />
+        </div>
+
+        <div className="space-y-4">
+          <Skeleton className="h-7 w-40" />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[1, 2, 3, 4].map(i => (
+              <Skeleton key={i} className="h-24 rounded-3xl" />
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
