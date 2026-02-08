@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import api from '@/lib/api';
 import type { Department, User, Course, Lecture } from '@/types';
-import { Building2, Users, BookOpen, Calendar, GraduationCap, Loader2, Plus, X, UserMinus, Search, Settings, Trash2 } from 'lucide-react';
+import { Building2, Users, BookOpen, Calendar, GraduationCap, Plus, X, UserMinus, Search, Settings, Trash2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Skeleton } from '@/components/Skeleton';
