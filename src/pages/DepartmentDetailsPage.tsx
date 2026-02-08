@@ -303,16 +303,16 @@ export function DepartmentDetailsPage() {
                 <span className="text-sm text-white/80 flex items-center gap-2 font-medium">الطلاب <GraduationCap className="w-4 h-4" /></span>
               </div>
               <div className="flex items-center justify-between border-t border-white/10 pt-4">
-                <span className="text-2xl font-bold">{courses.length}</span>
+                <span className="text-2xl font-bold">{deptCourses.length}</span>
                 <span className="text-sm text-white/80 flex items-center gap-2 font-medium">المواد الدراسية <BookOpen className="w-4 h-4" /></span>
               </div>
               <div className="grid grid-cols-2 gap-2 border-t border-white/10 pt-4">
                 <div className="flex flex-col">
-                  <span className="text-xl font-bold">{sections.length}</span>
+                  <span className="text-xl font-bold">{deptSections.length}</span>
                   <span className="text-[10px] text-white/60">شعبة</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-xl font-bold">{groups.length}</span>
+                  <span className="text-xl font-bold">{deptGroups.length}</span>
                   <span className="text-[10px] text-white/60">كروب</span>
                 </div>
               </div>
@@ -344,7 +344,7 @@ export function DepartmentDetailsPage() {
                   )}
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {rooms.map(room => (
+                  {deptRooms.map(room => (
                     <div key={room.id} className="p-3 rounded-xl border border-gray-100 bg-gray-50 flex flex-col items-center relative group">
                       <span className="text-[9px] font-bold bg-white border border-gray-200 px-1.5 py-0.5 rounded absolute top-2 right-2">{room.code}</span>
                       <Building2 className="w-6 h-6 text-gray-400 mb-2" />
@@ -357,7 +357,7 @@ export function DepartmentDetailsPage() {
                       )}
                     </div>
                   ))}
-                  {rooms.length === 0 && <p className="col-span-3 text-center py-4 text-gray-400 text-xs italic">لا توجد قاعات</p>}
+                  {deptRooms.length === 0 && <p className="col-span-3 text-center py-4 text-gray-400 text-xs italic">لا توجد قاعات</p>}
                 </div>
               </div>
 
@@ -377,7 +377,7 @@ export function DepartmentDetailsPage() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    {sections.map(section => (
+                    {deptSections.map(section => (
                       <div key={section.id} className="flex items-center justify-between p-2 rounded-lg border border-gray-50 bg-gray-50/50 group">
                         <span className="text-xs font-bold text-gray-600">{section.name}</span>
                         {canManageDept && (
@@ -387,7 +387,7 @@ export function DepartmentDetailsPage() {
                         )}
                       </div>
                     ))}
-                    {sections.length === 0 && <p className="text-center py-2 text-gray-400 text-[10px] italic">لا توجد شعب</p>}
+                    {deptSections.length === 0 && <p className="text-center py-2 text-gray-400 text-[10px] italic">لا توجد شعب</p>}
                   </div>
                 </div>
 
@@ -405,7 +405,7 @@ export function DepartmentDetailsPage() {
                     )}
                   </div>
                   <div className="space-y-2">
-                    {groups.map(group => (
+                    {deptGroups.map(group => (
                       <div key={group.id} className="flex items-center justify-between p-2 rounded-lg border border-gray-50 bg-gray-50/50 group">
                         <span className="text-xs font-bold text-gray-600">{group.name}</span>
                         {canManageDept && (
@@ -415,7 +415,7 @@ export function DepartmentDetailsPage() {
                         )}
                       </div>
                     ))}
-                    {groups.length === 0 && <p className="text-center py-2 text-gray-400 text-[10px] italic">لا توجد كروبات</p>}
+                    {deptGroups.length === 0 && <p className="text-center py-2 text-gray-400 text-[10px] italic">لا توجد كروبات</p>}
                   </div>
                 </div>
               </div>

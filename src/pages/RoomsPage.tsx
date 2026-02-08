@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { QRCodeSVG } from 'qrcode.react';
-import { Skeleton, CardSkeleton } from '@/components/Skeleton';
+import { Skeleton } from '@/components/Skeleton';
 
 export function RoomsPage() {
   const { currentUser } = useAuth();

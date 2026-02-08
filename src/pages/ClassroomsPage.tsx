@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/lib/supabase';
 import api from '@/lib/api';
@@ -182,67 +182,6 @@ const CommentSection = React.memo(({ postId, currentUser }: { postId: string; cu
 });
 
 CommentSection.displayName = 'CommentSection';
-
-  return (
-    <div className="mt-6 pt-6 border-t border-gray-100">
-      <div className="flex items-center gap-2 mb-4 text-sm font-bold text-gray-700">
-        <MessageSquare className="w-4 h-4 text-indigo-600" />
-        التعليقات ({comments.length})
-      </div>
-      
-      <div className="space-y-4 mb-4 max-h-[300px] overflow-y-auto custom-scrollbar">
-        {loading ? (
-          <div className="flex justify-center py-2">
-            <Loader2 className="w-4 h-4 text-gray-400 animate-spin" />
-          </div>
-        ) : comments.length === 0 ? (
-          <p className="text-xs text-gray-400 text-center italic py-2">لا توجد تعليقات بعد.</p>
-        ) : (
-          comments.map(comment => (
-            <div key={comment.id} className="flex gap-3 group">
-              <div className="w-8 h-8 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center text-[10px] font-bold shrink-0 text-indigo-600">
-                {comment.profiles?.full_name?.charAt(0)}
-              </div>
-              <div className="flex-1 bg-gray-50 rounded-2xl px-3 py-2">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-xs font-bold text-gray-900">{comment.profiles?.full_name_ar || comment.profiles?.full_name}</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] text-gray-400">{new Date(comment.created_at).toLocaleDateString('ar-IQ')}</span>
-                    {(comment.author_id === currentUser?.id || currentUser?.role === 'hod' || currentUser?.role === 'dean' || currentUser?.role === 'owner') && (
-                      <button onClick={() => handleDeleteComment(comment.id)} className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <p className="text-sm text-gray-700">{comment.content}</p>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-
-      <form onSubmit={handleSubmit} className="relative">
-        <input
-          type="text"
-          value={newComment}
-          onChange={e => setNewComment(e.target.value)}
-          placeholder="اكتب تعليقاً..."
-          className="w-full bg-gray-50 border border-gray-100 rounded-xl px-4 py-2.5 text-sm pl-10 focus:bg-white focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-          dir="rtl"
-        />
-        <button 
-          type="submit"
-          disabled={!newComment.trim() || addCommentMutation.isPending}
-          className="absolute left-2 top-2 p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors disabled:opacity-30"
-          title="إرسال"
-        >
-          {addCommentMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-        </button>
-      </form>
-    </div>
-  );
-}
 
 export function ClassroomsPage() {
   const { currentUser } = useAuth();
